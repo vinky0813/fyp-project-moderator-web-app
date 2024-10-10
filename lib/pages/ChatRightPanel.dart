@@ -39,10 +39,12 @@ class _Chatrightpanelstate extends State<Chatrightpanel> {
       userId = user.id;
       _user = types.User(id: userId!);
     }
+
     _loadServiceAccount();
     _loadMessages();
     _subscribeToMessages();
     _fetchGroupMembers();
+    _fetchUserFcmToken(userId!);
   }
 
   @override
@@ -54,22 +56,30 @@ class _Chatrightpanelstate extends State<Chatrightpanel> {
     }
   }
 
+
+  Future<void> _fetchUserFcmToken(String userId) async {
+    final response = await Supabase.instance.client
+        .from("profiles")
+        .select("fcm_token")
+        .eq("id", userId)
+        .single();
+
+    if (response != null && response['fcm_token'] != null) {
+      final currentUserFcmToken = response['fcm_token'];
+      _fcmTokens = _fcmTokens.where((token) => token != currentUserFcmToken).toList();
+    }
+  }
+
   Future<String> getAccessToken() async {
     final serviceAccount = await loadServiceAccount();
-    final clientEmail = serviceAccount['client_email'];
-    final privateKey = serviceAccount['private_key'];
 
     const scopes = 'https://www.googleapis.com/auth/firebase.messaging';
 
-    final accountCredentials = ServiceAccountCredentials(
-      clientEmail,
-      privateKey,
-      scopes,
-    );
+    final accountCredentials = ServiceAccountCredentials.fromJson(serviceAccount);
 
     final client = await clientViaServiceAccount(accountCredentials, [scopes]);
 
-    final response = await client.get(Uri.parse('https://www.googleapis.com/token'));
+    print(client.credentials.accessToken.data);
 
     return client.credentials.accessToken.data;
   }
@@ -261,22 +271,21 @@ class _Chatrightpanelstate extends State<Chatrightpanel> {
   Future<void> _sendNotifications(types.TextMessage message) async {
     for (String token in _fcmTokens) {
       await _sendFCMNotification(token, message);
+      print("FCM TOKEN: $token");
     }
   }
 
   Future<void> _sendFCMNotification(String fcmToken, types.TextMessage message) async {
-
-    if (message.author.id == _user.id) {
-      return;
-    }
-
     print("SENDING NOTIFICATION");
+
     final accessToken = await getAccessToken();
     final url = 'https://fcm.googleapis.com/v1/projects/${_serviceAccount["project_id"]}/messages:send';
+
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $accessToken',
     };
+
     final body = jsonEncode({
       "message": {
         "token": fcmToken,
@@ -289,6 +298,10 @@ class _Chatrightpanelstate extends State<Chatrightpanel> {
 
     try {
       final response = await http.post(Uri.parse(url), headers: headers, body: body);
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
       if (response.statusCode == 200) {
         print('Notification sent successfully!');
       } else {

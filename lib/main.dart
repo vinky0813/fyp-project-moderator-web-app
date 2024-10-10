@@ -12,33 +12,15 @@ void main() async {
 
   await dotenv.load(fileName: ".env");
 
-  final apiKey = dotenv.env["FIREBASE_API_KEY"];
-  final authDomain = dotenv.env["FIREBASE_AUTH_DOMAIN"];
-  final projectId = dotenv.env["FIREBASE_PROJECT_ID"];
-  final storageBucket = dotenv.env["FIREBASE_STORAGE_BUCKET"];
-  final messagingSenderId = dotenv.env["FIREBASE_MESSAGING_SENDER_ID"];
-  final appId = dotenv.env["FIREBASE_APP_ID"];
-  final measurementId = dotenv.env["FIREBASE_MEASUREMENT_ID"];
-
-  print(apiKey);
-  print(authDomain);
-  print(projectId);
-  print(storageBucket);
-  print(messagingSenderId);
-  print(appId);
-  print(measurementId);
-
   try {
     await Firebase.initializeApp(
       options: FirebaseOptions(
-        apiKey: apiKey!,
-        authDomain: authDomain!,
-        projectId: projectId!,
-        storageBucket: storageBucket!,
-        messagingSenderId: messagingSenderId!,
-        appId: appId!,
-        measurementId: measurementId!,
-      ),
+        apiKey: 'AIzaSyBPjaSfM3f6PO-9wWJRXpT2o8g8FaREbTs',
+        appId: '1:240403571417:android:052ea9ddb0b77149ae54c8',
+        messagingSenderId: '240403571417',
+        projectId: 'fyp-project-6a908',
+        storageBucket: 'fyp-project-6a908.appspot.com',
+      )
     );
     print("Firebase initialized successfully.");
   } catch (e) {

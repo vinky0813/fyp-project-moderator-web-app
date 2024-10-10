@@ -28,7 +28,35 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
   void initState() {
     super.initState();
     initializeDashboardData();
+    setupForegroundMessageHandler();
   }
+
+  void setupForegroundMessageHandler() {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Received a message in the foreground: ${message.messageId}');
+      if (message.notification != null) {
+        // Show a notification or update the UI as needed
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text(message.notification!.title ?? 'Notification'),
+              content: Text(message.notification!.body ?? 'No content'),
+              actions: <Widget>[
+                TextButton(
+                  child: Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      }
+    });
+  }
+
 
   Future<void> initializeDashboardData() async {
     final user = Supabase.instance.client.auth.currentUser;
