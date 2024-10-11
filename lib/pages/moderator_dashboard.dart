@@ -1,5 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:fyp_moderator_web_app/pages/moderator_search.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -300,7 +301,9 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(4),
                                 )),
-                            onPressed: () {},
+                            onPressed: () {
+                              Get.to(() => ModeratorSearch());
+                            },
                             child: Text(
                               "All Properties",
                               style: TextStyle(color: Colors.white),

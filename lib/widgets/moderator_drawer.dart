@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fyp_moderator_web_app/pages/moderator_dashboard.dart';
+import 'package:fyp_moderator_web_app/pages/moderator_search.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -79,14 +81,14 @@ class _ModeratorDrawerState extends State<ModeratorDrawer> {
             leading: Icon(Icons.dashboard),
             title: Text('Dashboard'),
             onTap: () {
-              // Handle navigation to dashboard
+              Get.to(() => ModeratorDashboard());
             },
           ),
           ListTile(
             leading: Icon(Icons.list),
             title: Text('All Properties'),
             onTap: () {
-              // Handle navigation to all properties
+              Get.to(() => ModeratorSearch());
             },
           ),
           ListTile(

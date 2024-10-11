@@ -70,7 +70,7 @@ class Property {
 
   static Future<List<Property>> getSearchedProperty(double lat, double long) async {
 
-    final url = Uri.parse("http://10.0.2.2:2000/api/search-properties-by-location")
+    final url = Uri.parse("http://localhost:2000/api/search-properties-by-location")
         .replace(queryParameters: {
       "lat": lat.toString(),
       "long": long.toString(),

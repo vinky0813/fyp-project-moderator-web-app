@@ -46,7 +46,7 @@ class _RightPanelState extends State<RightPanel> {
     try {
       final response = await Supabase.instance.client
           .from('Listing')
-          .update({'isPublished': true})
+          .update({'isPublished': true, 'isVerified' : true})
           .eq('listing_id', widget.propertyListing.listing_id);
 
       Get.snackbar('Success', 'Listing accepted successfully.');
