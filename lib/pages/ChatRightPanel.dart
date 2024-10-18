@@ -30,6 +30,7 @@ class _Chatrightpanelstate extends State<Chatrightpanel> {
   List<types.User> _groupMembers = [];
   List<String> _fcmTokens = [];
   late Map<String, dynamic> _serviceAccount;
+  late String myFcmToken;
 
   @override
   void initState() {
@@ -39,12 +40,11 @@ class _Chatrightpanelstate extends State<Chatrightpanel> {
       userId = user.id;
       _user = types.User(id: userId!);
     }
-
+    _fetchUserFcmToken(userId!);
     _loadServiceAccount();
     _loadMessages();
     _subscribeToMessages();
     _fetchGroupMembers();
-    _fetchUserFcmToken(userId!);
   }
 
   @override
@@ -64,9 +64,9 @@ class _Chatrightpanelstate extends State<Chatrightpanel> {
         .eq("id", userId)
         .single();
 
-    if (response != null && response['fcm_token'] != null) {
-      final currentUserFcmToken = response['fcm_token'];
-      _fcmTokens = _fcmTokens.where((token) => token != currentUserFcmToken).toList();
+    if (response["fcm_token"] != null) {
+      myFcmToken = response["fcm_token"];
+      print("myfcmtoken: $myFcmToken");
     }
   }
 
@@ -116,6 +116,7 @@ class _Chatrightpanelstate extends State<Chatrightpanel> {
       setState(() {
         _groupMembers = members;
         _fcmTokens = members.map((member) => member.metadata?['fcm_token'] as String?).whereType<String>().toList();
+        _fcmTokens.remove(myFcmToken);
       });
     }
   }

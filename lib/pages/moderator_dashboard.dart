@@ -29,35 +29,7 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
   void initState() {
     super.initState();
     initializeDashboardData();
-    setupForegroundMessageHandler();
   }
-
-  void setupForegroundMessageHandler() {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Received a message in the foreground: ${message.messageId}');
-      if (message.notification != null) {
-        // Show a notification or update the UI as needed
-        showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: Text(message.notification!.title ?? 'Notification'),
-              content: Text(message.notification!.body ?? 'No content'),
-              actions: <Widget>[
-                TextButton(
-                  child: Text('OK'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      }
-    });
-  }
-
 
   Future<void> initializeDashboardData() async {
     final user = Supabase.instance.client.auth.currentUser;
@@ -91,11 +63,15 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
     });
 
     FirebaseMessaging.onMessage.listen((event) {
+      print("triggered");
       final notification = event.notification;
       if (notification != null) {
+        print(notification.title);
+        print(notification.body);
         Get.snackbar("${notification.title}", "${notification.body}");
       }
-    });
+    }
+    );
 
     final oneWeekAgo = DateTime.now().subtract(Duration(days: 7));
 
@@ -181,7 +157,15 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
     pendingReportsCount = pendingReportsResponse.length;
     unreadMessagesCount = pendingMessagesResponse.length;
 
-    setState(() {});
+    print(pendingListingsCount);
+    print(pendingReportsCount);
+    print(unreadMessagesCount);
+
+    setState(() {
+      pendingListingsCount;
+      pendingReportsCount;
+      unreadMessagesCount;
+    });
   }
 
   Future<void> _setFcmToken(String fcmToken) async {
@@ -216,17 +200,17 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
                   children: [
                     ModeratorCard(
                       title: 'Pending Listing Registration',
-                      count: '0',
+                      count: pendingListingsCount.toString(),
                     ),
                     SizedBox(width: 80),
                     ModeratorCard(
                       title: 'Pending Reports Review',
-                      count: '0',
+                      count: pendingReportsCount.toString(),
                     ),
                     SizedBox(width: 80),
                     ModeratorCard(
                       title: 'Unread Chat Messages',
-                      count: '0',
+                      count: unreadMessagesCount.toString(),
                     ),
                   ],
                 ),

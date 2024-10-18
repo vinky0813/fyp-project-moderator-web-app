@@ -46,11 +46,13 @@ class LoginModerators extends StatelessWidget {
                       ),
                       child: TextField(
                         controller: emailController,
+                        maxLength: 50,
                         decoration: InputDecoration(
                           hintText: "Email",
                           border: InputBorder.none,
                           hintStyle:
                               TextStyle(color: Color(0xFF828282), fontSize: 20),
+                          counterText: "",
                         ),
                         style: TextStyle(fontSize: 20),
                       ),
@@ -78,11 +80,13 @@ class LoginModerators extends StatelessWidget {
                       child: TextField(
                         controller: passwordController,
                         obscureText: true,
+                        maxLength: 20,
                         decoration: InputDecoration(
                           hintText: "Password",
                           border: InputBorder.none,
                           hintStyle:
                               TextStyle(color: Color(0xFF828282), fontSize: 20),
+                          counterText: "",
                         ),
                         style: TextStyle(fontSize: 20),
                       ),
