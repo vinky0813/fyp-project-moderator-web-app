@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -20,6 +22,7 @@ class SearchBarLocationState extends State<SearchBarLocation> {
   double? long = 0;
   final SearchResultController searchResultController = Get.find<SearchResultController>();
   Map<String, dynamic>? filterData;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -37,23 +40,26 @@ class SearchBarLocationState extends State<SearchBarLocation> {
   }
 
   void _onSearchChanged(String value) async {
-    if (value.isNotEmpty) {
-      final response = await http.get(Uri.parse(
-          "https://nominatim.openstreetmap.org/search?q=$value&format=json&addressdetails=1"));
-      if (response.statusCode == 200) {
-        setState(() {
-          suggestions = json.decode(response.body);
-        });
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
+      if (value.isNotEmpty) {
+        final response = await http.get(Uri.parse(
+            "https://nominatim.openstreetmap.org/search?q=$value&format=json&addressdetails=1"));
+        if (response.statusCode == 200) {
+          setState(() {
+            suggestions = json.decode(response.body);
+          });
+        } else {
+          setState(() {
+            suggestions = [];
+          });
+        }
       } else {
         setState(() {
           suggestions = [];
         });
       }
-    } else {
-      setState(() {
-        suggestions = [];
-      });
-    }
+    });
   }
 
   void onSearchSubmitted() async {

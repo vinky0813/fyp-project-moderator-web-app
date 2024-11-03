@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:fyp_moderator_web_app/pages/ChatRightPanel.dart';
 import 'package:get/get.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fyp_moderator_web_app/pages/userinfopage.dart';
 
+import '../ChatService.dart';
 import '../models/boolean_variable.dart';
 import '../models/property.dart';
 import '../models/property_listing.dart';
@@ -24,6 +26,7 @@ class _RightPanelState extends State<RightPanel> {
   Property? property;
   bool isLoading = true;
   late List<BooleanVariable> trueAmenities;
+  String? userId;
 
   @override
   void initState() {
@@ -32,6 +35,8 @@ class _RightPanelState extends State<RightPanel> {
   }
 
   Future<void> initialize() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    userId = user?.id;
     property = await Property.getPropertyWithId(widget.propertyListing.property_id);
     trueAmenities = widget.propertyListing.amenities.where((b) => b.value).toList();
     trueAmenities.removeAt(0);
@@ -84,6 +89,16 @@ class _RightPanelState extends State<RightPanel> {
     );
   }
 
+  Future<void> rejectListing() async {
+    try {
+      await PropertyListing.deleteListing(widget.propertyListing.listing_id);
+      Get.snackbar('Success', 'Listing rejected successfully.');
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to reject listing: $e');
+    }
+  }
+
+
   void _showDenyDialog() {
     showDialog(
       context: context,
@@ -99,9 +114,10 @@ class _RightPanelState extends State<RightPanel> {
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).pop();
-                PropertyListing.deleteListing(widget.propertyListing.listing_id);
+                await rejectListing();
+                Get.snackbar('Success', 'Listing rejected successfully.');
                 widget.onListingUpdated();
               },
               child: const Text('Deny'),
@@ -149,8 +165,23 @@ class _RightPanelState extends State<RightPanel> {
             TextButton(
               style: TextButton.styleFrom(backgroundColor: Colors.black),
               child: const Text("Chat", style: TextStyle(color: Colors.white),),
-              onPressed: () {
+              onPressed: () async {
+                String? groupId = await Chatservice.findOneOnOneGroupId(
+                    userId!, property!.owner.id);
 
+                if (groupId != null) {
+                  Get.to(() => Chatrightpanel(groupId: groupId));
+                } else {
+                  final newGroupId = await Chatservice.createGroup(
+                      [userId!, property!.owner.id]);
+
+                  if (newGroupId != null) {
+                    Get.to(() => Chatrightpanel(groupId: newGroupId));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Failed to create chat group")));
+                  }
+                }
               },
             ),
             const SizedBox(width: 20,),

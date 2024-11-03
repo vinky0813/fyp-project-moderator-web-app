@@ -8,6 +8,7 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:fyp_moderator_web_app/pages/moderator_chat.dart';
 import 'package:fyp_moderator_web_app/pages/moderator_listing_registration.dart';
 import 'package:fyp_moderator_web_app/widgets/moderator_drawer.dart';
+import '../AccessTokenController.dart';
 import '../widgets/moderator_card.dart';
 import '../widgets/moderator_app_bar.dart';
 import 'moderator_reports.dart';
@@ -28,6 +29,7 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
   @override
   void initState() {
     super.initState();
+    Get.put(Accesstokencontroller());
     initializeDashboardData();
   }
 
@@ -73,74 +75,61 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
     }
     );
 
+    await Future.wait([
+      _fetchSignUpsAndReports(),
+      _fetchPendingCounts(user.id),
+    ]);
+  }
+  Future<void> _fetchSignUpsAndReports() async {
     final oneWeekAgo = DateTime.now().subtract(Duration(days: 7));
 
-    final signUpsResponse = await Supabase.instance.client
-        .from('profiles')
-        .select('created_at')
-        .gte('created_at', oneWeekAgo.toIso8601String())
-        .order('created_at', ascending: true);
+    final responses = await Future.wait([
+      Supabase.instance.client
+          .from('profiles')
+          .select('created_at')
+          .gte('created_at', oneWeekAgo.toIso8601String())
+          .order('created_at', ascending: true),
 
-    final reportsResponse = await Supabase.instance.client
-        .from('Reports')
-        .select('created_at')
-        .gte('created_at', oneWeekAgo.toIso8601String())
-        .order('created_at', ascending: true);
+      Supabase.instance.client
+          .from('Reports')
+          .select('created_at')
+          .gte('created_at', oneWeekAgo.toIso8601String())
+          .order('created_at', ascending: true)
+    ]);
 
-    if (signUpsResponse != null) {
-      List<ChartData> newSignUps = [];
-      final List<dynamic> signUpsData = signUpsResponse;
 
-      for (var user in signUpsData) {
-        DateTime createdAt = DateTime.parse(user['created_at']).toLocal();
-        newSignUps.add(ChartData(createdAt, 1));
-      }
 
-      newSignUpsPerDay = List.generate(7, (index) {
-        DateTime date = DateTime.now().subtract(Duration(days: index)).toLocal();
-        int count = newSignUps.where((item) =>
-        item.date.year == date.year &&
-            item.date.month == date.month &&
-            item.date.day == date.day).fold(0, (prev, _) => prev + 1);
+    final signUpsData = responses[0] as List<dynamic>;
+    newSignUpsPerDay = _processChartData(signUpsData);
 
-        print("date $date, count $count");
-        return ChartData(date, count.toDouble());
-      }).reversed.toList();
+    final reportsData = responses[1] as List<dynamic>;
+    reportsPerDay = _processChartData(reportsData);
+  }
 
-      setState(() {});
-    } else {
-      print('Error fetching data: sign-ups: ${signUpsResponse}');
+  List<ChartData> _processChartData(List<dynamic> data) {
+    List<ChartData> chartData = [];
+
+    for (var item in data) {
+      DateTime createdAt = DateTime.parse(item['created_at']).toLocal();
+      chartData.add(ChartData(createdAt, 1));
     }
 
-    if (reportsResponse != null) {
-      List<ChartData> newReports = [];
-      final List<dynamic> reportsData = reportsResponse;
+    return List.generate(7, (index) {
+      DateTime date = DateTime.now().subtract(Duration(days: index)).toLocal();
+      int count = chartData.where((item) =>
+      item.date.year == date.year &&
+          item.date.month == date.month &&
+          item.date.day == date.day).fold(0, (prev, _) => prev + 1);
 
-      for (var report in reportsData) {
-        DateTime createdAt = DateTime.parse(report['created_at']).toLocal();
-        newReports.add(ChartData(createdAt, 1));
-      }
+      return ChartData(date, count.toDouble());
+    }).reversed.toList();
+  }
 
-      reportsPerDay = List.generate(7, (index) {
-        DateTime date = DateTime.now().subtract(Duration(days: index)).toLocal();
-        int count = newReports.where((item) =>
-        item.date.year == date.year &&
-            item.date.month == date.month &&
-            item.date.day == date.day).fold(0, (prev, _) => prev + 1);
-
-        print("date $date, count $count");
-        return ChartData(date, count.toDouble());
-      }).reversed.toList();
-
-      setState(() {});
-    } else {
-      print('Error fetching data: reports: ${reportsResponse}');
-    }
-
+  Future<void> _fetchPendingCounts(String userId) async {
     final pendingListingsResponse = await Supabase.instance.client
         .from('Listing')
         .select('listing_id')
-        .eq('isPublished', false);
+        .eq('isVerified', false);
 
     final pendingReportsResponse = await Supabase.instance.client
         .from('Reports')
@@ -150,7 +139,7 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
     final pendingMessagesResponse = await Supabase.instance.client
         .from('Message_Read_Status')
         .select('id')
-        .eq('user_id', user!.id)
+        .eq('user_id', userId)
         .eq('is_read', false);
 
     pendingListingsCount = pendingListingsResponse.length;
@@ -161,11 +150,7 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
     print(pendingReportsCount);
     print(unreadMessagesCount);
 
-    setState(() {
-      pendingListingsCount;
-      pendingReportsCount;
-      unreadMessagesCount;
-    });
+    setState(() {});
   }
 
   Future<void> _setFcmToken(String fcmToken) async {

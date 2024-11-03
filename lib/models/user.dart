@@ -1,6 +1,12 @@
 import 'dart:convert';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:developer' as developer;
+
+import '../AccessTokenController.dart';
+
+final accessTokenController = Get.find<Accesstokencontroller>();
+final accessToken = accessTokenController.token;
 
 class User {
   String id;
@@ -38,16 +44,16 @@ class User {
 
   static Future<User> getUserById(String user_id) async {
     developer.log("im here");
-    final url = Uri.parse("http://localhost:2000/api/get-renter-with-id/$user_id");
-    final response = await http.get(url);
+    final url = Uri.parse("https://fyp-project-liart.vercel.app/api/get-renter-with-id/$user_id");
+    final response = await http.get(url, headers: {"Authorization": "Bearer $accessToken"});
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
 
       developer.log("jsonresponse: $jsonResponse");
 
-      if (jsonResponse["data"].isNotEmpty) {
-        return User.fromJson(jsonResponse["data"]);
+      if (jsonResponse["renterData"].isNotEmpty) {
+        return User.fromJson(jsonResponse["renterData"]);
       } else {
         throw Exception("No user found");
       }
@@ -57,12 +63,12 @@ class User {
   }
 
   static Future<bool> checkRenterId(String renter_id) async {
-    final url = Uri.parse("http://10.0.2.2:2000/api/check-renter/$renter_id");
+    final url = Uri.parse("https://fyp-project-liart.vercel.app/api/check-renter/$renter_id");
 
     try {
       final response = await http.get(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', "Authorization": "Bearer $accessToken"},
       );
 
       if (response.statusCode == 200) {
@@ -80,12 +86,12 @@ class User {
   static Future<List<User>> getTenants(String property_id) async {
 
     developer.log("start of getTenant");
-    final url = Uri.parse("http://10.0.2.2:2000/api/get-tenants/$property_id");
+    final url = Uri.parse("https://fyp-project-liart.vercel.app/api/get-tenants/$property_id");
 
     try {
       final response = await http.get(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', "Authorization": "Bearer $accessToken"},
       );
 
       developer.log("Response status code: ${response.statusCode}");
@@ -123,13 +129,13 @@ class User {
   }
 
   static Future<void> updateUser(String user_id, String username, String contactNo, String profilePic) async {
-    final url = Uri.parse("http://10.0.2.2:2000/api/update-renter-information/$user_id");
+    final url = Uri.parse("https://fyp-project-liart.vercel.app/api/update-renter-information/$user_id");
 
     developer.log("${user_id}, ${username}, ${contactNo}, ${profilePic}");
 
     final response = await http.put(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', "Authorization": "Bearer $accessToken"},
         body: jsonEncode({
           "username": username,
           "contact_no": contactNo,

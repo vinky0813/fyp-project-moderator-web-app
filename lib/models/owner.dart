@@ -1,6 +1,12 @@
 import 'dart:convert';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:developer' as developer;
+
+import '../AccessTokenController.dart';
+
+final accessTokenController = Get.find<Accesstokencontroller>();
+final accessToken = accessTokenController.token;
 
 class Owner {
   String id;
@@ -25,10 +31,10 @@ class Owner {
   }
 
   static Future<Owner> getOwnerWithId(String ownerId) async {
-    final url = Uri.parse("http://localhost:2000/api/get-owner-with-id/$ownerId");
+    final url = Uri.parse("https://fyp-project-liart.vercel.app/api/get-owner-with-id/$ownerId");
 
     final response = await http.get(
-      url, headers: {"Accept": "application/json"}
+      url, headers: {"Accept": "application/json", "Authorization": "Bearer $accessToken"}
     );
 
     if (response.statusCode == 200) {
@@ -40,11 +46,11 @@ class Owner {
   }
 
   static Future<void> updateOwner(String user_id, String username, String contactNo, String profilePic) async {
-    final url = Uri.parse("http://10.0.2.2:2000/api/update-owner-information/$user_id");
+    final url = Uri.parse("https://fyp-project-liart.vercel.app/api/update-owner-information/$user_id");
 
     final response = await http.put(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', "Authorization": "Bearer $accessToken"},
         body: jsonEncode({
           "username": username,
           "contact_no": contactNo,

@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:developer' as developer;
+
+import '../AccessTokenController.dart';
 
 class Review {
   final String user_id;
@@ -25,12 +28,15 @@ class Review {
   }
 
   static Future<void> uploadReview(Review review) async {
-    final url = Uri.parse("http://10.0.2.2:2000/api/upload-review");
+    final accessTokenController = Get.find<Accesstokencontroller>();
+    final accessToken = accessTokenController.token;
+
+    final url = Uri.parse("https://fyp-project-liart.vercel.app/api/upload-review");
 
     try {
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', "Authorization": "Bearer $accessToken"},
         body: jsonEncode({
           "rating": review.rating,
           "comment": review.comment,
@@ -52,12 +58,15 @@ class Review {
   }
 
   static Future<bool> checkUserReview(String listing_id, String user_id) async {
-    final url = Uri.parse("http://10.0.2.2:2000/api/check-user-review/$listing_id/$user_id");
+    final accessTokenController = Get.find<Accesstokencontroller>();
+    final accessToken = accessTokenController.token;
+
+    final url = Uri.parse("https://fyp-project-liart.vercel.app/api/check-user-review/$listing_id/$user_id");
 
     try {
       final response = await http.get(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', "Authorization": "Bearer $accessToken"},
       );
 
       if (response.statusCode == 200) {

@@ -7,9 +7,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fyp_moderator_web_app/models/report.dart';
 import 'package:fyp_moderator_web_app/pages/userinfopage.dart';
 
+import '../ChatService.dart';
 import '../models/boolean_variable.dart';
 import '../models/property.dart';
 import '../models/property_listing.dart';
+import 'ChatRightPanel.dart';
 
 class Reportspanel extends StatefulWidget {
   final PropertyListing propertyListing;
@@ -26,6 +28,7 @@ class _Reportspanelstate extends State<Reportspanel> {
   Property? property;
   bool isLoading = true;
   late List<BooleanVariable> trueAmenities;
+  String? userId;
 
   @override
   void initState() {
@@ -34,6 +37,8 @@ class _Reportspanelstate extends State<Reportspanel> {
   }
 
   Future<void> initialize() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    userId = user?.id;
     property = await Property.getPropertyWithId(widget.propertyListing.property_id);
     trueAmenities = widget.propertyListing.amenities.where((b) => b.value).toList();
     trueAmenities.removeAt(0);
@@ -61,6 +66,7 @@ class _Reportspanelstate extends State<Reportspanel> {
               onPressed: () {
                 Navigator.of(context).pop();
                 _resolveReportAndRemove(widget.propertyListing.listing_id);
+                Get.snackbar('Success', 'Listing Removed successfully.');
                 widget.onListingUpdated();
               },
               child: const Text('Confirm'),
@@ -91,6 +97,7 @@ class _Reportspanelstate extends State<Reportspanel> {
                 for (Report report in widget.reports) {
                   await _resolveReport(report.report_id);
                 }
+                Get.snackbar('Success', 'Report Resolved successfully.');
                 widget.onListingUpdated();
               },
               child: const Text('Confirm'),
@@ -124,6 +131,7 @@ class _Reportspanelstate extends State<Reportspanel> {
       await PropertyListing.deleteListing(listingId);
 
       print('Listing $listingId has been deleted successfully.');
+      Get.snackbar('Success', 'Listing deleted successfully.');
     } catch (e) {
       print('Error resolving report and deleting listing: $e');
     }
@@ -159,15 +167,30 @@ class _Reportspanelstate extends State<Reportspanel> {
               style: TextButton.styleFrom(backgroundColor: Colors.black),
               child: const Text("View Profile", style: TextStyle(color: Colors.white)),
               onPressed: () {
-                // Implement the profile viewing logic here
+                Get.to(() => UserInfoPage(user: property!.owner));
               },
             ),
             const SizedBox(width: 20),
             TextButton(
               style: TextButton.styleFrom(backgroundColor: Colors.black),
               child: const Text("Chat", style: TextStyle(color: Colors.white)),
-              onPressed: () {
-                // Implement chat logic here
+              onPressed: () async {
+                String? groupId = await Chatservice.findOneOnOneGroupId(
+                    userId!, property!.owner.id);
+
+                if (groupId != null) {
+                  Get.to(() => Chatrightpanel(groupId: groupId));
+                } else {
+                  final newGroupId = await Chatservice.createGroup(
+                      [userId!, property!.owner.id]);
+
+                  if (newGroupId != null) {
+                    Get.to(() => Chatrightpanel(groupId: newGroupId));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Failed to create chat group")));
+                  }
+                }
               },
             ),
             const SizedBox(width: 20),

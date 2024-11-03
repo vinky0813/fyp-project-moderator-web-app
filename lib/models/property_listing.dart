@@ -3,12 +3,17 @@ import 'dart:convert';
 import 'package:fyp_moderator_web_app/models/property.dart';
 import 'package:fyp_moderator_web_app/models/review.dart';
 import 'package:fyp_moderator_web_app/models/user.dart';
+import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase_project;
 
 import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
 
+import '../AccessTokenController.dart';
 import 'boolean_variable.dart';
+
+final accessTokenController = Get.find<Accesstokencontroller>();
+final accessToken = accessTokenController.token;
 
 class PropertyListing {
   String listing_id;
@@ -55,9 +60,9 @@ class PropertyListing {
 
     print("property id: ${property_id}");
 
-    final url = Uri.parse("http://localhost:2000/api/get-all-listing/$property_id");
+    final url = Uri.parse("https://fyp-project-liart.vercel.app/api/get-all-listing/$property_id");
     try {
-      final response = await http.get(url);
+      final response = await http.get(url, headers: {"Authorization": "Bearer $accessToken"});
       print(response.statusCode.toString());
 
       if (response.statusCode == 200) {
@@ -88,22 +93,26 @@ class PropertyListing {
   static Future<PropertyListing> _processListing(dynamic listingJson, String property_id) async {
     String listing_Id = listingJson["listing_id"];
 
-    List<String> images = await _getListingImages(listing_Id);
+    final imagesFuture = _getListingImages(listing_Id);
+    final amenitiesFuture = _getAmenities(listing_Id);
+    final reviewsFuture = _getReviews(listing_Id);
 
-    print(images.toString());
+    final results = await Future.wait([imagesFuture, amenitiesFuture, reviewsFuture]);
 
-    List<BooleanVariable> amenities = await _getAmenities(listing_Id);
+    List<String> images = results[0] as List<String>;
+    List<BooleanVariable> amenities = results[1] as List<BooleanVariable>;
+    List<Review> reviews = results[2] as List<Review>;
 
-    print("amenities: ${amenities.toString()}");
-    print("amenities: ${amenities.length}");
+    developer.log(images.toString());
+
+    developer.log("amenities: ${amenities.toString()}");
+    developer.log("amenities: ${amenities.length}");
 
     String room_type = _determineRoomType(amenities);
 
-    print("room type: $room_type");
+    developer.log("room type: $room_type");
 
-    List<Review> reviews = await _getReviews(listing_Id);
-
-    print("reviews: ${reviews.toString()}");
+    developer.log("reviews: ${reviews.toString()}");
 
     User? tenant;
 
@@ -111,12 +120,12 @@ class PropertyListing {
       try {
         tenant = await User.getUserById(listingJson["tenant"]);
       } catch (e) {
-        print("Error fetching tenant: $e");
+        developer.log("Error fetching tenant: $e");
         tenant = null;
       }
     }
 
-    print("tenant: ${tenant.toString()}");
+    developer.log("tenant: ${tenant.toString()}");
 
     PropertyListing propertyListingItem = PropertyListing(
       listing_id: listing_Id,
@@ -142,7 +151,7 @@ class PropertyListing {
 
   static Future<List<Review>> _getReviews(String listing_Id) async {
     final reviewsResponse = await http
-        .get(Uri.parse("http://localhost:2000/api/get-all-reviews/$listing_Id"));
+        .get(Uri.parse("https://fyp-project-liart.vercel.app/api/get-all-reviews/$listing_Id"), headers: {"Accept": "application/json", "Authorization": "Bearer $accessToken"});
 
     if (reviewsResponse.statusCode == 200) {
       final reviewsJsonResponse = jsonDecode(reviewsResponse.body);
@@ -159,7 +168,7 @@ class PropertyListing {
 
   static Future<List<String>> _getListingImages(String listing_Id) async {
     final imagesResponse = await http.get(
-        Uri.parse("http://localhost:2000/api/get-listing-images/$listing_Id"));
+        Uri.parse("https://fyp-project-liart.vercel.app/api/get-listing-images/$listing_Id"), headers: {"Authorization": "Bearer $accessToken"});
 
     if (imagesResponse.statusCode == 200) {
       final imagesjsonResponse = jsonDecode(imagesResponse.body);
@@ -174,8 +183,8 @@ class PropertyListing {
 
   static Future<List<BooleanVariable>> _getAmenities(String listing_Id) async {
     final url =
-        Uri.parse("http://localhost:2000/api/get-all-amenities/$listing_Id");
-    final response = await http.get(url);
+        Uri.parse("https://fyp-project-liart.vercel.app/api/get-all-amenities/$listing_Id");
+    final response = await http.get(url, headers: {"Authorization": "Bearer $accessToken"});
     print(response.body);
     if (response.statusCode == 200) {
       final amenitiesJson = jsonDecode(response.body);
@@ -236,66 +245,59 @@ class PropertyListing {
 
   static Future<void> deleteListing(String listing_id) async {
 
-    final image_delete_url = Uri.parse("http://localhost:2000/api/delete-listing-images/$listing_id");
+    final imageDeleteUrl = Uri.parse("https://fyp-project-liart.vercel.app/api/delete-listing-images/$listing_id");
 
-    try {
-      final response = await http.delete(image_delete_url);
+    final amenitiesUrl = Uri.parse("https://fyp-project-liart.vercel.app/api/delete-listing-amenities/$listing_id");
 
-      print(response.body);
+    final deleteImagesFuture = http.delete(imageDeleteUrl, headers: {"Authorization": "Bearer $accessToken"}).then((response) async {
+      developer.log(response.body);
       if (response.statusCode == 200) {
-
         final responseBody = jsonDecode(response.body);
         final imagesData = responseBody["data"] as List<dynamic>;
         final imagesToDeleteFromStorage = imagesData.map<String>((item) => item["image_url"] as String).toList();
 
-        print("Images to delete: ${imagesToDeleteFromStorage.toString()}");
-
+        developer.log("Images to delete: ${imagesToDeleteFromStorage.toString()}");
         await deleteImages(imagesToDeleteFromStorage);
-
       } else {
         final responseBody = jsonDecode(response.body);
-        print("Error deleting images: ${responseBody}");
+        developer.log("Error deleting images: ${responseBody}");
+        throw Exception("Failed to delete images");
       }
-    } catch (e) {
-      print('Unexpected error: $e');
-    }
+    });
 
-    final amenities_url = Uri.parse("http://localhost:2000/api/delete-listing-amenities/$listing_id");
+    final deleteAmenitiesFuture = http.delete(amenitiesUrl, headers: {"Authorization": "Bearer $accessToken"}).then((response) {
+      if (response.statusCode == 200) {
+        developer.log("Amenities deleted successfully");
+      } else {
+        final responseBody = jsonDecode(response.body);
+        developer.log('Error deleting listing amenities: ${responseBody['message']}');
+        throw Exception("Failed to delete amenities");
+      }
+    });
+
+    await Future.wait([deleteImagesFuture, deleteAmenitiesFuture]);
+
+    final listing_url = Uri.parse("https://fyp-project-liart.vercel.app/api/delete-listing/$listing_id");
 
     try {
-      final response = await http.delete(amenities_url);
+      final response = await http.delete(listing_url, headers: {"Authorization": "Bearer $accessToken"});
 
       if (response.statusCode == 200) {
-        print("amenities deleted successfully");
+        developer.log("Listing deleted successfully");
       } else {
         final responseBody = jsonDecode(response.body);
-        print('Error deleting listing: ${responseBody['message']}');
+        developer.log("'Error deleting listing: ${responseBody}'");
       }
     } catch (e) {
-      print('Unexpected error: $e');
-    }
-
-    final listing_url = Uri.parse("http://localhost:2000/api/delete-listing/$listing_id");
-
-    try {
-      final response = await http.delete(listing_url);
-
-      if (response.statusCode == 200) {
-        print("Listing deleted successfully");
-      } else {
-        final responseBody = jsonDecode(response.body);
-        print("'Error deleting listing: ${responseBody}'");
-      }
-    } catch (e) {
-      print('Unexpected error: $e');
+      developer.log('Unexpected error: $e');
     }
   }
 
   static Future<PropertyListing?> getCurrentProperty(String? listing_id) async {
 
-    final url = Uri.parse("http://localhost:2000/api/get-listing-with-id/$listing_id");
+    final url = Uri.parse("https://fyp-project-liart.vercel.app/api/get-listing-with-id/$listing_id");
     try {
-      final response = await http.get(url);
+      final response = await http.get(url, headers: {"Authorization": "Bearer $accessToken"});
       print(response.statusCode.toString());
 
       if (response.statusCode == 200) {
@@ -327,22 +329,24 @@ class PropertyListing {
 
       searchResultListing.addAll(listings);
     }
-    List<PropertyListing> publishedListings = searchResultListing.where((listing) => listing.isPublished).toList();
 
-    return publishedListings;
+    return searchResultListing;
   }
 
   static Future<List<PropertyListing>> fetchUnpublishedListings() async {
     List<PropertyListing> unpublishedListings = [];
 
-    final url = Uri.parse("http://localhost:2000/api/get-all-unpublished-listings");
+    final url = Uri.parse("https://fyp-project-liart.vercel.app/api/get-all-unverified-listings");
+
     try {
-      final response = await http.get(url);
-      print("Unpublished Listings Response Status: ${response.statusCode}");
+      final response = await http.get(url, headers: {
+        "Authorization": "Bearer $accessToken",
+        "Content-Type": "application/json",
+      });
 
       if (response.statusCode == 200) {
         final List<dynamic> listings = jsonDecode(response.body);
-        print("Unpublished Listings Data: ${listings.toString()}");
+        print("Listings Data: ${listings.toString()}");
 
         final List<Future<PropertyListing>> futures = listings
             .map((listingJson) => _processListing(listingJson, listingJson["property_id"]))
@@ -350,10 +354,10 @@ class PropertyListing {
 
         unpublishedListings = await Future.wait(futures);
       } else {
-        print("Failed to load unpublished listings: ${response.statusCode}");
+        print("Failed to load listings: ${response.statusCode}");
       }
     } catch (e) {
-      print("Error fetching unpublished listings: $e");
+      print("Error fetching listings: $e");
     }
 
     return unpublishedListings;

@@ -127,8 +127,6 @@ class _ModeratorReportsState extends State<ModeratorReports> {
               ],
             ),
           ),
-
-
           Expanded(
             flex: 3,
             child: selectedListing != null

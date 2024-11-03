@@ -19,6 +19,7 @@ class _ChatListPanelState extends State<ChatListPanel> {
   List<String?> chatThumbnailUrl = [];
   bool isLoading = true;
   List<int> unreadMessagesCount = [];
+  List<String> chatNames = [];
 
   @override
   void initState() {
@@ -33,9 +34,24 @@ class _ChatListPanelState extends State<ChatListPanel> {
       await _loadGroupIds();
       await _loadChatPictures();
       await _loadUnreadMessagesCount();
+      await _fetchGroupMembers();
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  Future<void> _fetchGroupMembers() async {
+    for (String groupId in _groupIds){
+      final response = await Supabase.instance.client
+          .from('Group_Members')
+          .select('user_id, profiles(username)')
+          .eq('group_id', groupId);
+
+      if (response != null) {
+        List groupUsernames = response.map((member) => member['profiles']['username'] ?? 'Unknown User').toList();
+        chatNames.add(groupUsernames.join(', '));
+      }
     }
   }
 
@@ -158,7 +174,7 @@ class _ChatListPanelState extends State<ChatListPanel> {
                     ? const Icon(Icons.person)
                     : null,
               ),
-              title: Text("Group ID: ${_groupIds[index]}"),
+              title: Text("${chatNames[index]}"),
               subtitle: unreadMessagesCount[index] > 0
                   ? Text(
                 "${unreadMessagesCount[index]} unread message(s)",
